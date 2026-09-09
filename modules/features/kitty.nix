@@ -1,11 +1,5 @@
 { self, inputs, ... }: {
 
-  flake.nixosModules.kitty = { pkgs, lib, ... }: {
-    environment.systemPackages = [
-      self.packages.${pkgs.stdenv.hostPlatform.system}.myKitty
-    ];
-  };
-
   perSystem = { pkgs, lib, self', ... }: {
 
     packages.myKitty = inputs.wrapper-modules.wrappers.kitty.wrap {
@@ -13,10 +7,10 @@
 
       font = {
         name = "JetBrainsMono Nerd Font";
-        size = 11;
+        size = 12;
       };
 
-      themeFile = "Catppuccin-Mocha";
+      themeFile = "Gruvbox-Dark";
 
       settings = {
         scrollback_lines = 10000;
@@ -24,6 +18,7 @@
         update_check_interval = 0;
         confirm_os_window_close = 0;
         window_padding_width = 6;
+        hide_window_decorations = true;
       };
 
       keybindings = {

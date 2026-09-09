@@ -9,10 +9,13 @@
 
     # Enable flakes
     nix.settings.experimental-features = [ "nix-command" "flakes" ];
-  
-    # Use the systemd-boot EFI boot loader.
-    boot.loader.systemd-boot.enable = true;
+
+    # Use grub
+    boot.loader.grub.enable = true;
+    boot.loader.grub.device = "nodev";
+    boot.loader.grub.efiSupport = true;
     boot.loader.efi.canTouchEfiVariables = true;
+    boot.loader.efi.efiSysMountPoint = "/boot";
   
     # Enable systemd services in initrd
     boot.initrd.systemd.enable = true;
@@ -77,6 +80,13 @@
   
     # List packages installed in system profile.
     # You can use https://search.nixos.org/ to find more packages (and options).
+
+    # Enable unfree packages
+    nixpkgs.config.allowUnfreePredicate = pkg: builtins.elem (lib.getName pkg) [
+        "corefonts"
+        "vista-fonts"
+      ];
+   
     environment.systemPackages = with pkgs; [
       vim # Do not forget to add an editor to edit configuration.nix! The Nano editor is also installed by default.
       wget
@@ -86,11 +96,14 @@
       keepassxc
       remmina
       firefox
-      wayland
+      xwayland-satellite
+      upower
     ];
 
     # Install fonts
     fonts.packages = with pkgs; [
+      corefonts
+      vista-fonts
       jetbrains-mono
     ];
   
@@ -109,6 +122,9 @@
 
     # Enable tailscale
     services.tailscale.enable = true;
+
+    # Enable upower daemon
+    services.upower.enable = true;
   
     # Open ports in the firewall.
     # networking.firewall.allowedTCPPorts = [ ... ];

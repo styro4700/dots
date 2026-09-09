@@ -16,11 +16,29 @@
           (lib.getExe self'.packages.myNoctalia)
         ];
 
-        input.keyboard = {
-          xkb.layout = "us,ua";
-        };
-
         layout.gaps = 5;
+
+        input = {
+          focus-follows-mouse = _:{};
+
+          keyboard = {
+            xkb = {
+              layout = "us,gr";
+              options = "grp:alt_shift_toggle,caps:escape";
+            };
+            repeat-rate = 40;
+            repeat-delay = 250;
+          };
+
+          touchpad = {
+            natural-scroll = _:{};
+            tap = _:{};
+          };
+
+          mouse = {
+            accel-profile = "flat";
+          };
+        };
 
         binds = {
           # "Mod+S".spawn-sh = 
@@ -28,7 +46,7 @@
           # "Mod+Q".close-window = _:{};
 
 
-          "Mod+Return".spawn-sh = lib.getExe pkgs.kitty;
+          "Mod+Return".spawn-sh = lib.getExe self'.packages.myKitty;
 
           "Mod+Q".close-window = _:{};
           "Mod+F".maximize-column = _:{};
