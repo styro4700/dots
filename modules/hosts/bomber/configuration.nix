@@ -5,6 +5,10 @@
       [ # Include the results of the hardware scan.
         self.nixosModules.bomberHardware
         self.nixosModules.niri
+        self.nixosModules.kitty
+        self.nixosModules.emacs
+        self.nixosModules.keyd
+        self.nixosModules.latex
       ];
 
     # Enable flakes
@@ -19,6 +23,41 @@
   
     # Enable systemd services in initrd
     boot.initrd.systemd.enable = true;
+
+    # --- Battery saving ---
+    # Using p-state driver for better battery life / perf scaling
+    # Forcing deep sleep (S3) for less battery drain
+    # NVME drive, deeper power state
+    # Lower power states for idle PCIE links between bursts
+    # ----------------------
+    boot.kernelParams = [ "amd_pstate=active" "mem_sleep_default=deep" "nvme_core.default_ps_max_latency_us=5500" "pcie_aspm=force" ];
+    # --- Wifi optimization ---
+    # Disable deep power saving for the rtw88 driver - less laggy/dropping wifi
+    # Enable MSI interrupts for lower latency
+    # -------------------------
+    boot.extraModprobeConfig = ''
+      options rtw88_core disable_lps_deep=1
+      options rtw88_pci disable_msi=0
+    '';
+    # --- Wifi optimization ---
+    # Lowe latency, better throughput
+    # -------------------------
+    boot.kernel.sysctl =  {
+      "net.ipv4.tcp_congestion_protocol" =  "bbr";
+      "net.core.default_qdisc" = "fq";
+      
+      # Bigger buffer helps wireguard push more
+      # throughput without stalling on bufferbloat
+      "net.core.rmem_max" = 26214400;
+      "net.core.wmem_max" = 26214400;
+      "net.core.rmem_default" = 1048576;
+      "net.core.wmem_default" = 1048576;
+      "net.ipv4.tcp_rmem" = "4096 1048576 26214400";
+      "net.ipv4.tcp_wmem" = "4096 1048576 26214400";
+      
+      # Reduces latency spikes under load - makes RDP more responsive
+      "net.ipv4.tcp_notsent_lowat" = 16384;
+    };
   
     # Use latest kernel.
     boot.kernelPackages = pkgs.linuxPackages_latest;
@@ -26,8 +65,12 @@
     networking.hostName = "bomber"; # Define your hostname.
   
     # Configure network connections interactively with nmcli or nmtui.
-    networking.networkmanager.enable = true;
-  
+    networking.networkmanager = {
+      enable = true;
+      wifi.powersave = false;
+      wifi.backend = "iwd";
+    };
+
     # Set your time zone.
     time.timeZone = "Europe/Athens";
   
@@ -42,12 +85,35 @@
     #   keyMap = "us";
     #   useXkbConfig = true; # use xkb.options in tty.
     # };
+
+    # Graphics
+    hardware = {
+      graphics = {
+        enable = true;
+        enable32Bit = true;
+        extraPackages = with pkgs; [
+          libva
+          mesa
+        ];
+      };
+      amdgpu = {
+        opencl.enable = true;
+        initrd.enable = true;
+      };
+    };
+
+    # Force apps to render natively on wayland
+    environment.sessionVariables = {
+      NIXOS_OZONE_WL = "1"; # Chromium/Electron apps
+      MOZ_ENABLE_WAYLAND = "1"; # Firefox
+      QT_QPA_PLATFORM = "wayland"; # Qt apps
+      _JAVA_AWT_WM_NONREPARENTING = "1"; # Fixes some Java/Swing apps
+    };
+
+    qt.enable = true;
   
     # Enable the X11 windowing system.
     # services.xserver.enable = true;
-  
-  
-    
   
     # Configure keymap in X11
     # services.xserver.xkb.layout = "us";
@@ -65,7 +131,7 @@
     # };
   
     # Enable touchpad support (enabled default in most desktopManager).
-    # services.libinput.enable = true;
+    services.libinput.enable = true;
   
     # Define a user account. Don't forget to set a password with ‘passwd’.
     users.mutableUsers = false;
@@ -91,6 +157,7 @@
       vim # Do not forget to add an editor to edit configuration.nix! The Nano editor is also installed by default.
       wget
       git
+      busybox
       tailscale
       freerdp
       keepassxc
@@ -98,6 +165,14 @@
       firefox
       xwayland-satellite
       upower
+      fastfetch
+      wl-clipboard
+      btop
+      radeontop
+      moonlight-qt
+      mullvad
+      mullvad-vpn
+      mullvad-browser
     ];
 
     # Install fonts
@@ -105,7 +180,10 @@
       corefonts
       vista-fonts
       jetbrains-mono
+      nerd-fonts.jetbrains-mono
     ];
+
+    fonts.fontconfig.enable = true;
   
     # Some programs need SUID wrappers, can be configured further or are
     # started in user sessions.
@@ -117,14 +195,26 @@
   
     # List services that you want to enable:
   
+    # Lets desktop shell switch power profiles
+    services.power-profiles-daemon.enable = true;
+
     # Enable the OpenSSH daemon.
     services.openssh.enable = true;
 
     # Enable tailscale
-    services.tailscale.enable = true;
+    services.tailscale = {
+      enable = true;
+      openFirewall = true; # Opens UDP 41641 for direct connections, if closed everything is relayed through tailscale's DERP servers
+      useRoutingFeatures = "client";
+    };
 
     # Enable upower daemon
     services.upower.enable = true;
+
+    # Belt-and-suspenders udev rule for killing wifi power management in case the modprobe option stops working
+    services.udev.extraRules = ''
+      ACTION=="add", SUBSYSTEM=="net", KERNEL=="wl*", RUN+="${pkgs.iw}/bin/iw dev $env{INTERFACE} set power_save off"
+    '';
   
     # Open ports in the firewall.
     # networking.firewall.allowedTCPPorts = [ ... ];

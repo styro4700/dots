@@ -1,5 +1,11 @@
 { self, inputs, ... }: {
 
+  flake.nixosModules.kitty = {
+    # enables ncurses-based stuff (emacs, tmux, ...) to resolve $TERM,
+    # they dont open otherwise
+    environment.enableAllTerminfo = true;
+  };
+
   perSystem = { pkgs, lib, self', ... }: {
 
     packages.myKitty = inputs.wrapper-modules.wrappers.kitty.wrap {
@@ -9,8 +15,6 @@
         name = "JetBrainsMono Nerd Font";
         size = 12;
       };
-
-      themeFile = "Gruvbox-Dark";
 
       settings = {
         scrollback_lines = 10000;
