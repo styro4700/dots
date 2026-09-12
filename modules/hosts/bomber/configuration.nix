@@ -173,6 +173,9 @@
       mullvad
       mullvad-vpn
       mullvad-browser
+      lynis
+      v4l-utils
+      mpv
     ];
 
     # Install fonts

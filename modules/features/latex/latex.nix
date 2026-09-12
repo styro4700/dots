@@ -13,11 +13,16 @@
 	  polyglossia
 	  preview
 	  dvisvgm
+	  unicode-math
       ]))
       pkgs.zathura
     ];
 
-    environment.etc."yasnippets/LaTeX-mode".source = ./snippets/LaTeX-mode;
+    fonts.packages = [ pkgs.libertinus ];
+
+    environment.etc."latex/yasnippets/LaTeX-mode".source = ./snippets/LaTeX-mode;
+    environment.etc."zathurarc".source = ./zathurarc;
+    environment.etc."latex/latex-templates".source = ./templates;
 
     custom.emacsPackage = lib.mkDefault
       self.packages.${pkgs.stdenv.hostPlatform.system}.myEmacsLatex;
@@ -33,6 +38,7 @@
       alwaysEnsure = true;
       alwaysTangle = true;
     };
+
   };
 
 }

@@ -2,6 +2,9 @@
 
 (add-to-list 'auto-mode-alist '("\\.tex\\'" . LaTeX-mode))
 
+;; do not append newline to snippet files!
+(add-hook 'snippet-mode-hook (lambda () (setq-local require-final-newline nil)))
+
 (use-package  tex
   :ensure auctex
 
@@ -19,7 +22,7 @@
   (reftex-plug-into-AUCTeX t)
   :config
   (add-to-list 'TeX-command-list
-	       '("LatexMk" "latexmk -pvc -view=none -synctex=1 -xelatex %s" TeX-run-TeX nil t))
+	       '("LatexMk-live" "latexmk -pvc -view=none -synctex=1 -xelatex %s" TeX-run-TeX nil t))
   (setq TeX-view-program-selection '((output-pdf "Zathura")))
   (setq TeX-view-program-list '(("Zathura" ("zathura --synctex-forward %n:0:%b -x \"emacsclient +%{line} %{input}\" %o")))))
 
@@ -30,7 +33,7 @@
 (use-package yasnippet
   :ensure t
   :init (yas-global-mode 1)
-  :custom (yas-snippet-dirs '("/etc/yasnippets")))
+  :custom (yas-snippet-dirs '("/etc/latex/yasnippets")))
 
 
 
@@ -43,7 +46,7 @@
         (let ((s (thing-at-point 'sexp)))
           (unless (and s (assoc (substring-no-properties s)
                                  cdlatex-command-alist-comb))
-            (yas-next-field-or-maybe-expand)
+            (or (yas-expand) (yas-next-field-or-maybe-expand))
             t))
       (let (cdlatex-tab-hook minp)
         (setq minp (min (save-excursion (cdlatex-tab) (point))
@@ -68,6 +71,19 @@
 ;; -------------------------------------------------
 
 
+(use-package autoinsert
+  :ensure nil
+  :hook (LaTeX-mode . auto-insert)
+  :custom
+  (auto-insert-query nil)
+  :config
+  (add-to-list 'auto-insert-alist
+	       '("\\.tex\\'" . "/etc/latex/latex-templates/lecture-notes.tex")))
+
+;; example of a second template, manually inserted through a function
+;; (defun my/insert-problem-set-template ()
+;;   (interactive)
+;;   (insert-file-contents "/etc/latex-templates/problem-set.tex"))
 
 (defun my/yas-try-expanding-auto-snippets ()
   (when (bound-and-true-p yas-minor-mode)

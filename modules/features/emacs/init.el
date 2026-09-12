@@ -54,6 +54,20 @@
 (use-package no-littering
   :ensure t)
 
+;;(use-package evil
+;;  :ensure t
+;;  :init
+;;  (setq evil-want-integration t
+;;        evil-want-keybinding nil)   ; let evil-collection manage keybindings instead
+;;  :config
+;;  (evil-mode 1))
+;;
+;;(use-package evil-collection
+;;  :ensure t
+;;  :after evil
+;;  :config
+;;  (evil-collection-init))          ; consistent evil bindings in dired, magit, etc.
+
 (use-package avy
   :ensure t
   :bind ("M-j" . avy-goto-char-in-line))
