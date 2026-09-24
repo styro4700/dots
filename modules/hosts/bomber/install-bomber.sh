@@ -32,6 +32,17 @@ export HOME=/root # sudo -E keeps /home/nixos, which makes nix warn
 say "checking that we booted in UEFI mode"
 [[ -d /sys/firmware/efi ]] || die "not in UEFI mode, reboot and pick the UEFI entry for the usb stick (F12)"
 
+say "enabling zram swap (the iso lives in ram and evaluating the flake is memory hungry)"
+if [[ -z $(swapon --show --noheadings) ]]; then
+  modprobe zram
+  zdev=$(zramctl --find --size "$(awk '/MemTotal/ {print $2}' /proc/meminfo)K" --algorithm zstd)
+  mkswap "$zdev" >/dev/null
+  swapon "$zdev"
+  note "swap on $zdev"
+else
+  note "swap already active"
+fi
+
 say "checking the network"
 online=false
 for i in 1 2 3 4 5 6; do
@@ -66,6 +77,7 @@ read -rp "   type WIPE to continue: " answer
 say "partitioning and encrypting $disk with disko"
 note "1G esp on /boot, then luks2 with btrfs subvolumes root, nix and persist"
 note "you'll be asked for the luks passphrase, you need it on every boot"
+swapoff "$persist/swapfile" 2>/dev/null || true
 umount -R /mnt 2>/dev/null || true
 cryptsetup close "$luks_name" 2>/dev/null || true
 nix run github:nix-community/disko/latest -- --mode destroy,format,mount --yes-wipe-all-disks --flake "$flake"
@@ -96,10 +108,18 @@ mkdir -p "$persist/home/$main_user"
 cp -a "$work" "$persist/home/$main_user/dots"
 chown -R "$main_uid:$main_gid" "$persist/home/$main_user"
 
+say "adding a temporary 8G swapfile on the new disk, evaluating the config needs more than the 8G of ram"
+btrfs filesystem mkswapfile --size 8g "$persist/swapfile"
+swapon "$persist/swapfile"
+
 say "running nixos-install (this is the slow part)"
 note "root has no prompt here, its password comes from $persist/passwords/root"
 nixos-install --root /mnt --flake "$flake" --no-root-passwd
 sync
+
+say "removing the temporary swapfile"
+swapoff "$persist/swapfile"
+rm "$persist/swapfile"
 
 trap - ERR
 say "done. reboot, pull the usb stick and enter the luks passphrase at boot."
