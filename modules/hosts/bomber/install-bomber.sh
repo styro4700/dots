@@ -51,10 +51,16 @@ info "UEFI firmware detected."
 
 # ------------------------------------------------------------------ step 2 --
 step "Checking the network"
-if ! curl -fsS --max-time 15 -o /dev/null https://github.com; then
-  die "Cannot reach github.com. Connect first (wifi: 'nmcli device wifi connect <SSID> --ask' or 'wpa_cli'), then re-run."
-fi
-info "github.com is reachable."
+info "Any working connection is fine (ethernet or wifi); testing by reaching github.com."
+online=false
+for attempt in 1 2 3 4 5 6; do   # ethernet can take a few seconds to get an address after boot
+  if curl -fsS --max-time 5 -o /dev/null https://github.com 2>/dev/null; then online=true; break; fi
+  info "Not reachable yet (attempt $attempt/6), waiting 5s..."
+  sleep 5
+done
+$online || die "No working internet connection. Plug in ethernet, or join wifi ('nmcli device wifi connect <SSID> --ask'), then re-run."
+IFACE="$(ip -o route get 1.1.1.1 2>/dev/null | sed -n 's/.* dev \([^ ]*\).*/\1/p' | head -n1)"
+info "Online${IFACE:+ via $IFACE}."
 
 # ------------------------------------------------------------------ step 3 --
 step "Fetching the configuration"
