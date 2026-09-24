@@ -1,138 +1,105 @@
 #!/usr/bin/env bash
-# modules/hosts/bomber/install.sh
+# Install script for the bomber host. Run it from the minimal NixOS iso,
+# booted in UEFI mode:
 #
-# Installs NixOS for the `bomber` host from the minimal NixOS ISO:
-# partitions + encrypts the disk (disko), sets the login passwords, and runs
-# nixos-install. Everything it does is announced as it happens.
-#
-# Usage, from the booted minimal ISO (UEFI mode), with network up:
 #   curl -O https://raw.githubusercontent.com/styro4700/dots/main/modules/hosts/bomber/install.sh
 #   bash install.sh
-#
-# Overridable: REPO_URL, BRANCH.
 set -euo pipefail
 
-HOST="bomber"
-USERS=(alice root)                 # accounts that get a password file
-MAIN_USER="alice"                  # gets a copy of the repo in ~/dots
-MAIN_USER_UID=1000
-MAIN_USER_GID=100                  # "users" group
-REPO_URL="${REPO_URL:-https://github.com/styro4700/dots}"
-BRANCH="${BRANCH:-main}"
-WORKDIR="/tmp/dots"
-PERSIST="/mnt/persist"
-LUKS_NAME="cryptroot"              # must match disko.nix
+host=bomber
+users=(alice root)
+main_user=alice
+main_uid=1000
+main_gid=100
+repo=${REPO_URL:-https://github.com/styro4700/dots}
+branch=${BRANCH:-main}
+work=/tmp/dots
+persist=/mnt/persist
+luks_name=cryptroot # has to match disko.nix
 
 export NIX_CONFIG="experimental-features = nix-command flakes"
 
-# ---------------------------------------------------------------- output ----
-if [[ -t 1 ]]; then B=$'\e[1m'; G=$'\e[32m'; Y=$'\e[33m'; R=$'\e[31m'; N=$'\e[0m'; else B=""; G=""; Y=""; R=""; N=""; fi
-TOTAL=8; N_STEP=0
-step() { N_STEP=$((N_STEP + 1)); printf '\n%s==> [%d/%d] %s%s\n' "$B$G" "$N_STEP" "$TOTAL" "$1" "$N"; }
-info() { printf '    %s\n' "$1"; }
-warn() { printf '%s    ! %s%s\n' "$Y" "$1" "$N"; }
-die()  { printf '%s\nERROR: %s%s\n' "$R" "$1" "$N" >&2; exit 1; }
-trap 'printf "%s\nFailed at line %s: %s\nNothing after this point ran. Fix the problem and re-run the script (it is safe to re-run).%s\n" "$R" "$LINENO" "$BASH_COMMAND" "$N" >&2' ERR
+say() { printf '\n>> %s\n' "$*"; }
+note() { printf '   %s\n' "$*"; }
+die() { printf 'error: %s\n' "$*" >&2; exit 1; }
+trap 'printf "failed at line %s: %s\n" "$LINENO" "$BASH_COMMAND" >&2' ERR
 
-# --------------------------------------------------------------- preflight --
 if [[ $EUID -ne 0 ]]; then
-  info "Not root; re-running this script with sudo."
   exec sudo -E bash "$0" "$@"
 fi
 
-printf '%sInstalling NixOS host "%s"%s\n' "$B" "$HOST" "$N"
-info "Repo:   $REPO_URL (branch $BRANCH)"
-info "Users:  ${USERS[*]}"
+say "checking that we booted in UEFI mode"
+[[ -d /sys/firmware/efi ]] || die "not in UEFI mode, reboot and pick the UEFI entry for the usb stick (F12)"
 
-# ------------------------------------------------------------------ step 1 --
-step "Checking that the ISO was booted in UEFI mode"
-[[ -d /sys/firmware/efi ]] || die "Not booted in UEFI mode. Reboot and pick the UEFI entry for the USB stick in the boot menu (F12)."
-info "UEFI firmware detected."
-
-# ------------------------------------------------------------------ step 2 --
-step "Checking the network"
-info "Any working connection is fine (ethernet or wifi); testing by reaching github.com."
+say "checking the network"
 online=false
-for attempt in 1 2 3 4 5 6; do   # ethernet can take a few seconds to get an address after boot
-  if curl -fsS --max-time 5 -o /dev/null https://github.com 2>/dev/null; then online=true; break; fi
-  info "Not reachable yet (attempt $attempt/6), waiting 5s..."
+for i in 1 2 3 4 5 6; do
+  if curl -fsS --max-time 5 -o /dev/null https://github.com 2>/dev/null; then
+    online=true
+    break
+  fi
+  note "github.com not reachable yet ($i/6), retrying in 5s"
   sleep 5
 done
-$online || die "No working internet connection. Plug in ethernet, or join wifi ('nmcli device wifi connect <SSID> --ask'), then re-run."
-IFACE="$(ip -o route get 1.1.1.1 2>/dev/null | sed -n 's/.* dev \([^ ]*\).*/\1/p' | head -n1)"
-info "Online${IFACE:+ via $IFACE}."
+$online || die "no internet. plug in ethernet or run: nmcli device wifi connect <SSID> --ask"
+iface=$(ip -o route get 1.1.1.1 2>/dev/null | sed -n 's/.* dev \([^ ]*\).*/\1/p' | head -n1)
+note "online${iface:+ via $iface}"
 
-# ------------------------------------------------------------------ step 3 --
-step "Fetching the configuration"
-info "Cloning $REPO_URL into $WORKDIR (any previous copy is replaced)."
-rm -rf "$WORKDIR"
-git clone --branch "$BRANCH" "$REPO_URL" "$WORKDIR"
-cd "$WORKDIR"
-info "Checked out commit $(git rev-parse --short HEAD): $(git log -1 --format=%s)"
-FLAKE="$WORKDIR#$HOST"
+say "cloning $repo ($branch) to $work"
+rm -rf "$work"
+git clone --branch "$branch" "$repo" "$work"
+cd "$work"
+note "at $(git rev-parse --short HEAD): $(git log -1 --format=%s)"
+flake="$work#$host"
 
-# ------------------------------------------------------------------ step 4 --
-step "Reading the target disk from the configuration"
-info "Evaluating the flake (this downloads the inputs and can take a minute)."
-DISK="$(nix eval --raw "$WORKDIR#nixosConfigurations.$HOST.config.disko.devices.disk.main.device")"
-[[ -b "$(readlink -f "$DISK")" ]] || die "Disk $DISK from disko.nix does not exist on this machine. Check 'ls -l /dev/disk/by-id' and fix disko.nix."
-info "disko.nix says the target disk is: $DISK"
+say "reading the target disk from disko.nix (downloads flake inputs, takes a minute)"
+disk=$(nix eval --raw "$work#nixosConfigurations.$host.config.disko.devices.disk.main.device")
+[[ -b $(readlink -f "$disk") ]] || die "$disk doesn't exist, check ls -l /dev/disk/by-id and fix disko.nix"
 echo
-lsblk -o NAME,SIZE,MODEL,FSTYPE,MOUNTPOINTS "$(readlink -f "$DISK")"
+lsblk -o NAME,SIZE,MODEL,FSTYPE,MOUNTPOINTS "$(readlink -f "$disk")"
 echo
-warn "EVERYTHING on this disk will be permanently erased, including any Windows install."
-read -rp "    Type WIPE to erase it and continue, anything else aborts: " answer
-[[ "$answer" == "WIPE" ]] || die "Aborted, nothing was changed."
+note "everything on $disk will be erased, windows included."
+read -rp "   type WIPE to continue: " answer
+[[ $answer == WIPE ]] || die "aborted, nothing was changed"
 
-# ------------------------------------------------------------------ step 5 --
-step "Partitioning, encrypting and mounting the disk (disko)"
-info "Layout: 1 GB ESP (/boot) + LUKS2 volume with btrfs subvolumes root, nix, persist."
-info "You will be asked to choose the LUKS passphrase (needed at every boot). Do not forget it."
+say "partitioning and encrypting $disk with disko"
+note "1G esp on /boot, then luks2 with btrfs subvolumes root, nix and persist"
+note "you'll be asked for the luks passphrase, you need it on every boot"
 umount -R /mnt 2>/dev/null || true
-cryptsetup close "$LUKS_NAME" 2>/dev/null || true
-info "You already confirmed the wipe above, so disko's own prompt is skipped (--yes-wipe-all-disks)."
-nix run github:nix-community/disko/latest -- --mode destroy,format,mount --yes-wipe-all-disks --flake "$FLAKE"
-mountpoint -q /mnt/persist || die "/mnt/persist is not mounted after disko; the layout in disko.nix does not match what this script expects."
-info "Disk ready and mounted under /mnt."
+cryptsetup close "$luks_name" 2>/dev/null || true
+nix run github:nix-community/disko/latest -- --mode destroy,format,mount --yes-wipe-all-disks --flake "$flake"
+mountpoint -q "$persist" || die "$persist isn't mounted, disko.nix doesn't match what this script expects"
 
-# ------------------------------------------------------------------ step 6 --
-step "Creating the login password files in /persist/passwords"
-info "Passwords are stored as yescrypt hashes; the config reads them at boot (hashedPasswordFile)."
-mkdir -p "$PERSIST/passwords"
-chmod 700 "$PERSIST/passwords"
-for user in "${USERS[@]}"; do
+say "setting passwords in $persist/passwords"
+note "stored as yescrypt hashes, read at boot through hashedPasswordFile"
+mkdir -p "$persist/passwords"
+chmod 700 "$persist/passwords"
+for user in "${users[@]}"; do
   while true; do
-    read -rsp "    Password for $user: " pw1; echo
-    read -rsp "    Repeat password for $user: " pw2; echo
-    if [[ -n "$pw1" && "$pw1" == "$pw2" ]]; then break; fi
-    warn "Empty or not matching, try again."
+    read -rsp "   password for $user: " pw1; echo
+    read -rsp "   again: " pw2; echo
+    [[ -n $pw1 && $pw1 == "$pw2" ]] && break
+    note "empty or they don't match, try again"
   done
-  (umask 077; printf '%s' "$pw1" | nix shell nixpkgs#mkpasswd -c mkpasswd -m yescrypt -s > "$PERSIST/passwords/$user")
-  chmod 600 "$PERSIST/passwords/$user"
-  info "Wrote $PERSIST/passwords/$user"
+  (umask 077; printf '%s' "$pw1" | nix shell nixpkgs#mkpasswd -c mkpasswd -m yescrypt -s > "$persist/passwords/$user")
+  chmod 600 "$persist/passwords/$user"
 done
 unset pw1 pw2
 
-# ------------------------------------------------------------------ step 7 --
-step "Seeding persistent state"
-info "Creating a machine-id in /persist/etc, so the first boot has a real one to bind-mount."
-mkdir -p "$PERSIST/etc"
-[[ -s "$PERSIST/etc/machine-id" ]] || systemd-machine-id-setup --root="$PERSIST"
-HOME_DIR="$PERSIST/home/$MAIN_USER"
-info "Copying the config repo to /persist/home/$MAIN_USER/dots so it is in ~/dots on first boot."
-mkdir -p "$HOME_DIR"
-cp -a "$WORKDIR" "$HOME_DIR/dots"
-chown -R "$MAIN_USER_UID:$MAIN_USER_GID" "$HOME_DIR"
+say "seeding /persist"
+note "machine-id, so the first boot has one to bind mount"
+mkdir -p "$persist/etc"
+[[ -s $persist/etc/machine-id ]] || systemd-machine-id-setup --root="$persist"
+note "copying the repo to /persist/home/$main_user/dots, so it's ~/dots after boot"
+mkdir -p "$persist/home/$main_user"
+cp -a "$work" "$persist/home/$main_user/dots"
+chown -R "$main_uid:$main_gid" "$persist/home/$main_user"
 
-# ------------------------------------------------------------------ step 8 --
-step "Installing NixOS (nixos-install)"
-info "Builds the system from the flake and installs it, plus GRUB, onto /mnt. This is the long step."
-info "Root has no separate prompt: its password comes from /persist/passwords/root."
-nixos-install --root /mnt --flake "$FLAKE" --no-root-passwd
+say "running nixos-install (this is the slow part)"
+note "root has no prompt here, its password comes from $persist/passwords/root"
+nixos-install --root /mnt --flake "$flake" --no-root-passwd
 sync
 
 trap - ERR
-printf '\n%sInstall finished.%s\n' "$B$G" "$N"
-info "Next: run 'reboot', remove the USB stick, and enter the LUKS passphrase at boot."
-info "If the firmware shows no NixOS entry, pick it from the boot menu (F12)."
-info "After logging in: 'touch /imperm-test', reboot once, and check the file is gone."
+say "done. reboot, pull the usb stick and enter the luks passphrase at boot."
+note "after logging in: touch /imperm-test, reboot, and check that it's gone"
