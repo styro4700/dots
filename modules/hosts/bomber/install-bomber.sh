@@ -27,6 +27,7 @@ trap 'printf "failed at line %s: %s\n" "$LINENO" "$BASH_COMMAND" >&2' ERR
 if [[ $EUID -ne 0 ]]; then
   exec sudo -E bash "$0" "$@"
 fi
+export HOME=/root # sudo -E keeps /home/nixos, which makes nix warn
 
 say "checking that we booted in UEFI mode"
 [[ -d /sys/firmware/efi ]] || die "not in UEFI mode, reboot and pick the UEFI entry for the usb stick (F12)"
