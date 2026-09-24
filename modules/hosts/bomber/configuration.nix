@@ -4,13 +4,13 @@
     imports =
       [ # Include the results of the hardware scan.
         self.nixosModules.bomberHardware
-	self.nixosModules.bomberDisko
-	self.nixosModules.impermanence
+      	self.nixosModules.bomberDisko
+      	self.nixosModules.impermanence
         self.nixosModules.niri
         self.nixosModules.kitty
         self.nixosModules.keyd
-	self.nixosModules.home-manager
-	self.nixosModules.bomberUsers
+        self.nixosModules.home-manager
+        self.nixosModules.bomberUsers
       ];
 
     # Enable flakes
@@ -201,7 +201,13 @@
     services.power-profiles-daemon.enable = true;
 
     # Enable the OpenSSH daemon.
-    services.openssh.enable = true;
+    services.openssh = {
+      enable = true;
+      hostKeys = [
+        { path = "/persist/etc/ssh/ssh_host_ed25519_key"; type="ed25519"; }
+        { path = "/persist/etc/ssh/ssh_host_rsa_key"; type="rsa"; bits=4096; }
+      ];
+    };
 
     # Enable tailscale
     services.tailscale = {
@@ -217,7 +223,16 @@
     services.udev.extraRules = ''
       ACTION=="add", SUBSYSTEM=="net", KERNEL=="wl*", RUN+="${pkgs.iw}/bin/iw dev $env{INTERFACE} set power_save off"
     '';
-  
+
+    # Persisted system state
+    environment.persistence."/persist".directories = [
+      "/var/log"
+      "/var/lib/systemd/coredump"
+      "/var/lib/iwd"
+      "/etc/NetworkManager/system-connections"
+      "/var/lib/tailscale"
+    ];
+
     # Open ports in the firewall.
     # networking.firewall.allowedTCPPorts = [ ... ];
     # networking.firewall.allowedUDPPorts = [ ... ];

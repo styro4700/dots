@@ -35,22 +35,18 @@
 
     environment.persistence."/persist" = {
       hideMounts = true;
-      directories = [
-        "/var/lib/nixos" # uig/gid maps
-	"/var/lib/systemd/coredump"
-	"/var/log"
-	"/var/lib/iwd" # wifi (iwd backend)
-	"/etc/NetworkManager/system-connections"
-      ];
-      files = [
-        "/etc/machine-id"
-      ];
+      directories = [ "/var/lib/nixos" ]; # uid/gid maps
+      files = [ "/etc/machine-id" ];
     };
 
     # machine-id is a bind mount, so systemd must not try to commit it
     systemd.suppressedSystemUnits = [ "systemd-machine-id-commit.service" ];
 
     users.mutableUsers = false;
+
+    security.sudo.extraConfig = ''
+      Defaults lecture = never
+    '';
   };
 }
 

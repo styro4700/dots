@@ -111,26 +111,6 @@
         ],
         "right": [
           {
-            "defaultSettings": {
-              "compactMode": false,
-              "defaultPeerAction": "copy-ip",
-              "hideDisconnected": false,
-              "hideMullvadExitNodes": true,
-              "loginServer": "",
-              "pingCount": 5,
-              "refreshInterval": 5000,
-              "showIpAddress": true,
-              "showPeerCount": true,
-              "showSearchBar": false,
-              "sshUsername": "",
-              "taildropDownloadDir": "~/Downloads",
-              "taildropEnabled": true,
-              "taildropReceiveMode": "operator",
-              "terminalCommand": ""
-            },
-            "id": "plugin:tailscale"
-          },
-          {
             "blacklist": [],
             "chevronColor": "none",
             "colorizeIcons": false,
@@ -169,6 +149,9 @@
             "iconColor": "none",
             "id": "Brightness",
             "textColor": "none"
+          },
+          {
+            "id": "plugin:privacy-indicator"
           }
         ]
       },
@@ -701,7 +684,7 @@
       }
     },
     "notificationsState": {
-      "lastSeenTs": 1788911722000
+      "lastSeenTs": 0
     },
     "changelogState": {
       "lastSeenVersion": "v4.7.7"

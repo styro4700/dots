@@ -13,15 +13,23 @@
       "dots"
       "Documents"
       ".config/emacs/var" # no-littering
+      ".config/noctalia"
+      ".cache/noctalia"
+      ".config/mozilla"
     ];
-    environment.persistence."/persist".users.alice.files = [ ];
 
     home-manager.users.alice = {
       imports = [
         self.homeManagerModules.emacs
 	self.homeManagerModules.latex
         self.homeManagerModules.bash
+	self.homeManagerModules.git
       ];
+
+      custom.git = {
+        name = "Alex";
+	email = "310758950+styro4700@users.noreply.github.com";
+      };
 
       home.stateVersion = "26.05";
     };

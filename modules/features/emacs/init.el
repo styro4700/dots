@@ -31,6 +31,7 @@
   (tool-bar-mode -1)
   (scroll-bar-mode -1)
   (global-display-line-numbers-mode t)
+  (global-font-lock-mode 1)
 
   :custom-face
   (default              ((t (:background "#000000" :foreground "#d0d0d0"))))
@@ -97,3 +98,7 @@
 
 (use-package magit
   :ensure t)
+
+(use-package nix-mode
+  :ensure t
+  :mode "\\.nix\\'")
