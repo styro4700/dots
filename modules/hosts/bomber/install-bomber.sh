@@ -59,7 +59,7 @@ disk=$(nix eval --raw "$work#nixosConfigurations.$host.config.disko.devices.disk
 echo
 lsblk -o NAME,SIZE,MODEL,FSTYPE,MOUNTPOINTS "$(readlink -f "$disk")"
 echo
-note "everything on $disk will be erased, windows included."
+note "everything on $disk will be erased."
 read -rp "   type WIPE to continue: " answer
 [[ $answer == WIPE ]] || die "aborted, nothing was changed"
 
