@@ -54,6 +54,14 @@
 (use-package no-littering
   :ensure t)
 
+(defun my/save-and-close-client-frame ()
+  "Prompt to save any modified buffer before closing frame"
+  (interactive)
+  (save-some-buffers)
+  (delete-frame))
+
+(global-set-key (kbd "C-x C-c") #'my/save-and-close-client-frame)
+
 ;;(use-package evil
 ;;  :ensure t
 ;;  :init

@@ -4,25 +4,30 @@
     imports =
       [ # Include the results of the hardware scan.
         self.nixosModules.bomberHardware
+	self.nixosModules.bomberDisko
+	self.nixosModules.impermanence
         self.nixosModules.niri
         self.nixosModules.kitty
-        self.nixosModules.emacs
         self.nixosModules.keyd
-        self.nixosModules.latex
+	self.nixosModules.home-manager
+	self.nixosModules.bomberUsers
       ];
 
     # Enable flakes
     nix.settings.experimental-features = [ "nix-command" "flakes" ];
 
     # Use grub
-    boot.loader.grub.enable = true;
-    boot.loader.grub.device = "nodev";
-    boot.loader.grub.efiSupport = true;
-    boot.loader.efi.canTouchEfiVariables = true;
-    boot.loader.efi.efiSysMountPoint = "/boot";
-  
-    # Enable systemd services in initrd
-    boot.initrd.systemd.enable = true;
+    boot.loader.grub = {
+      enable = true;
+      efiSupport = true;
+      device = "nodev";
+      copyKernels = true;
+      configurationLimit = 10;
+    };
+    boot.loader.efi = {
+      canTouchEfiVariables = true;
+      efiSysMountPoint = "/boot";
+    };
 
     # --- Battery saving ---
     # Using p-state driver for better battery life / perf scaling
@@ -133,15 +138,6 @@
     # Enable touchpad support (enabled default in most desktopManager).
     services.libinput.enable = true;
   
-    # Define a user account. Don't forget to set a password with ‘passwd’.
-    users.mutableUsers = false;
-    users.users.root = { hashedPasswordFile = "/persist/passwords/root"; };
-    users.users.alice = {
-      isNormalUser = true;
-      extraGroups = [ "wheel" ]; # Enable ‘sudo’ for the user.
-      hashedPasswordFile = "/persist/passwords/alice";
-    };
-  
     # programs.firefox.enable = true;
   
     # List packages installed in system profile.
@@ -151,8 +147,11 @@
     nixpkgs.config.allowUnfreePredicate = pkg: builtins.elem (lib.getName pkg) [
         "corefonts"
         "vista-fonts"
+	"osu-lazer-bin"
+        "discord"
+	"discord-unwrapped"
       ];
-   
+
     environment.systemPackages = with pkgs; [
       vim # Do not forget to add an editor to edit configuration.nix! The Nano editor is also installed by default.
       wget

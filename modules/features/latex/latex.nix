@@ -1,7 +1,17 @@
 { self, inputs, ... }: {
 
-  flake.nixosModules.latex = { config, pkgs, lib, ... }: {
-    environment.systemPackages = [
+  flake.homeManagerModules.latex = { config, pkgs, lib, ... }: {
+    options.custom.latex.autoInsertTemplate = lib.mkOption {
+      type = lib.types.path;
+      default = ./templates/lecture-notes.tex;
+      description = ''
+        Template file auto-inserted into the new, empty .tex
+        buffers.
+      '';
+    };
+
+    config = {
+      home.packages = [
         (pkgs.texliveSmall.withPackages (ps: with ps; [
 	  latexmk
 	  mathtools
@@ -14,18 +24,27 @@
 	  preview
 	  dvisvgm
 	  unicode-math
-      ]))
-      pkgs.zathura
-    ];
+	]))
+	pkgs.libertinus
+      ];
 
-    fonts.packages = [ pkgs.libertinus ];
+      fonts.fontconfig.enable = true;
 
-    environment.etc."latex/yasnippets/LaTeX-mode".source = ./snippets/LaTeX-mode;
-    environment.etc."zathurarc".source = ./zathurarc;
-    environment.etc."latex/latex-templates".source = ./templates;
+      programs.zathura = {
+        enable = true;
+	extraConfig = builtins.readFile ./zathurarc;
+      };
 
-    custom.emacsPackage = lib.mkDefault
-      self.packages.${pkgs.stdenv.hostPlatform.system}.myEmacsLatex;
+      xdg.configFile = {
+        "emacs/snippets/LaTeX-mode".source = ./snippets/LaTeX-mode;
+	"emacs/templates/auto".source = ./templates/auto;
+	"emacs/templates/lecture-notes.tex".source =
+	  config.custom.latex.autoInsertTemplate;
+      };
+
+      custom.emacs.package = lib.mkDefault
+        self.packages.${pkgs.stdenv.hostPlatform.system}.myEmacsLatex;
+    };
   };
 
   perSystem = { pkgs, ... }: {
@@ -38,7 +57,6 @@
       alwaysEnsure = true;
       alwaysTangle = true;
     };
-
   };
 
 }

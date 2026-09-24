@@ -33,7 +33,7 @@
 (use-package yasnippet
   :ensure t
   :init (yas-global-mode 1)
-  :custom (yas-snippet-dirs '("/etc/latex/yasnippets")))
+  :custom (yas-snippet-dirs '("~/.config/emacs/snippets")))
 
 
 
@@ -78,12 +78,12 @@
   (auto-insert-query nil)
   :config
   (add-to-list 'auto-insert-alist
-	       '("\\.tex\\'" . "/etc/latex/latex-templates/lecture-notes.tex")))
+	       '("\\.tex\\'" . "~/.config/emacs/templates/lecture-notes.tex")))
 
 ;; example of a second template, manually inserted through a function
 ;; (defun my/insert-problem-set-template ()
 ;;   (interactive)
-;;   (insert-file-contents "/etc/latex-templates/problem-set.tex"))
+;;   (insert-file-contents "~/.config/emacs/templates/problem-set.tex"))
 
 (defun my/yas-try-expanding-auto-snippets ()
   (when (bound-and-true-p yas-minor-mode)
