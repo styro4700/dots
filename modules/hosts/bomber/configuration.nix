@@ -11,6 +11,8 @@
         self.nixosModules.keyd
         self.nixosModules.home-manager
         self.nixosModules.bomberUsers
+        self.nixosModules.hyprland
+        self.nixosModules.nmtui-theme
       ];
 
     # Enable flakes
@@ -175,6 +177,7 @@
       lynis
       v4l-utils
       mpv
+      libnotify
     ];
 
     # Install fonts

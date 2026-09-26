@@ -17,16 +17,16 @@
       serviceConfig.Type = "oneshot";
       script = ''
         mkdir -p /mnt
-	mount -o subvol=/ /dev/mapper/cryptroot /mnt
-
-	# nested subvolumes must go first
-	btrfs subvolume list -o /mnt/root | cut -f9 -d' ' | while read -r subvolume; do
-	  btrfs subvolume delete "/mnt/$subvolume"
-	done
-	btrfs subvolume delete /mnt/root
-	btrfs subvolume create /mnt/root
-
-	umount /mnt
+      	mount -o subvol=/ /dev/mapper/cryptroot /mnt
+      
+      	# nested subvolumes must go first
+      	btrfs subvolume list -o /mnt/root | cut -f9 -d' ' | while read -r subvolume; do
+      	  btrfs subvolume delete "/mnt/$subvolume"
+      	done
+      	btrfs subvolume delete /mnt/root
+      	btrfs subvolume create /mnt/root
+      
+      	umount /mnt
       '';
     };
 

@@ -16,13 +16,31 @@
         size = 12;
       };
 
-      settings = {
+      settings = let t = self.theme; in {
         scrollback_lines = 10000;
         enable_audio_bell = false;
         update_check_interval = 0;
         confirm_os_window_close = 0;
         window_padding_width = 6;
         hide_window_decorations = true;
+
+        foreground = t.base06;
+        background = t.base00;
+        selection_foreground = t.base07;
+        selection_background = t.base02;
+        cursor = t.base06;
+        cursor_text_color = t.base00;
+
+        # ANSI palette: greys from the theme, colours muted to match them.
+        # yellow is the amber accent, bright yellow the warning yellow.
+        color0 = t.base00;   color8  = t.base04;
+        color1 = t.red;      color9  = t.brightRed;
+        color2 = t.green;    color10 = t.brightGreen;
+        color3 = t.base09;   color11 = t.yellow;
+        color4 = t.blue;     color12 = t.brightBlue;
+        color5 = t.magenta;  color13 = t.brightMagenta;
+        color6 = t.cyan;     color14 = t.brightCyan;
+        color7 = t.base06;   color15 = t.base07;
       };
 
       keybindings = {

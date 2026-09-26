@@ -21,9 +21,10 @@
     home-manager.users.alice = {
       imports = [
         self.homeManagerModules.emacs
-	self.homeManagerModules.latex
+        self.homeManagerModules.latex
         self.homeManagerModules.bash
-	self.homeManagerModules.git
+        self.homeManagerModules.git
+        self.homeManagerModules.hyprland
       ];
 
       custom.git = {
