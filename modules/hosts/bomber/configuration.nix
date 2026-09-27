@@ -178,6 +178,7 @@
       v4l-utils
       mpv
       libnotify
+      strace
     ];
 
     # Install fonts

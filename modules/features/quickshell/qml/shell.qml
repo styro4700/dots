@@ -5,6 +5,8 @@ import QtQuick
 
 ShellRoot {
     property bool notifVisible: false
+    property bool launcherVisible: false
+    property bool sessionVisible: false
 
     ListModel { id: toastModel }
 
@@ -40,6 +42,20 @@ ShellRoot {
         }
     }
 
+    IpcHandler {
+        target: "launcher"
+        function toggle(): void {
+            launcherVisible = !launcherVisible;
+        }
+    }
+
+    IpcHandler {
+        target: "session"
+        function toggle(): void {
+            sessionVisible = !sessionVisible;
+        }
+    }
+
     Wallpaper {}
     Bar {
         server: notifServer
@@ -47,10 +63,32 @@ ShellRoot {
     }
     Popups {
         model: toastModel
+        visible: toastModel.count > 0 && !lock.locked
     }
     NotificationCenter {
         server: notifServer
         visible: notifVisible
         onCloseRequested: notifVisible = false
+    }
+    Launcher {
+        visible: launcherVisible
+        onCloseRequested: launcherVisible = false
+    }
+    SessionMenu {
+        visible: sessionVisible
+        onCloseRequested: sessionVisible = false
+        onLockRequested: lock.lockNow()
+    }
+    Lock { id: lock }
+
+    Connections {
+        target: lock
+        function onLockedChanged() {
+            if (lock.locked) {
+                notifVisible = false;
+                launcherVisible = false;
+                sessionVisible = false;
+            }
+        }
     }
 }

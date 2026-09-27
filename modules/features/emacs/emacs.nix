@@ -4,20 +4,20 @@
     options.custom.emacs = {
       package = lib.mkOption {
         type = lib.types.package;
-	default = self.packages.${pkgs.stdenv.hostPlatform.system}.myEmacs;
-	description = ''
-	  Which built Emacs package this user's daemon runs. Importing
-	  homeManagerModules.latex overrides this to the LaTeX build.
-      	  '';
+        default = self.packages.${pkgs.stdenv.hostPlatform.system}.myEmacs;
+        description = ''
+          Which built Emacs package this user's daemon runs. Importing
+          homeManagerModules.latex overrides this to the LaTeX build.
+        '';
         };
 
       daemon.enable = lib.mkOption {
         type = lib.types.bool;
-	default = true;
-	description = ''
-	  Whether to run Emacs as this user's systemd daemon. Disable
-	  it if you prefer to launch Emacs manually.
-	'';
+        default = true;
+        description = ''
+          Whether to run Emacs as this user's systemd daemon. Disable
+          it if you prefer to launch Emacs manually.
+        '';
       };
     };
 
@@ -26,22 +26,36 @@
 
       services.emacs = {
         enable = config.custom.emacs.daemon.enable;
-	package = config.custom.emacs.package;
-	defaultEditor = true;
+        package = config.custom.emacs.package;
+        defaultEditor = true;
       };
 
       home.shellAliases = {
         e = "emacsclient -c -a ''";
-	et = "emacsclient -nw -a ''";
-      };
-    };
-  };
+        et = "emacsclient -nw -a ''";
+     };
+   };
+ };
 
-  perSystem = { pkgs, ... }: {
+  perSystem = { pkgs, ... }: let
+    emacsTheme = pkgs.writeText "theme.el" ''
+      ;; -*- lexical-binding: t; -*-
+      (defconst my/theme
+        '(${pkgs.lib.concatStringsSep "\n    " (pkgs.lib.mapAttrsToList (name: value: "(${name} . \"${value}\")") self.theme)}))
+
+      (defun my/c (name)
+        "Colour NAME from theme.nix, as a hex string."
+        (alist-get name my/theme))
+    '';
+  in {
     overlays = [ inputs.emacs-overlay.overlays.default ];
 
+    packages.emacsTheme = emacsTheme;
+
     packages.myEmacs = pkgs.emacsWithPackagesFromUsePackage {
-      config = ./init.el;
+      config = pkgs.runCommand "init.el" { } ''
+        cat ${emacsTheme} ${./init.el} > $out
+      '';
       defaultInitFile = true;
       package = pkgs.emacs-pgtk;
       alwaysEnsure = true;

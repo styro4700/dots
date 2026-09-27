@@ -30,7 +30,11 @@ PanelWindow {
 
     onVisibleChanged: if (!visible) expandedId = null
 
-    Keys.onEscapePressed: panel.closeRequested()
+    Item {
+        anchors.fill: parent
+        focus: true
+        Keys.onEscapePressed: panel.closeRequested()
+    }
 
     MouseArea {
         anchors.fill: parent

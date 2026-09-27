@@ -5,7 +5,12 @@
       enable = true;
       xwayland.enable = true;
     };
+    
+    # PAM service used by quickshell lock screen (Lock.qml)
+    security.pam.services.quickshell-lock = { };
   };
+
+
 
   # Staying off configType = "lua" for now, it breaks on "$mod" style
   # settings (home-manager#9468). Revisit later.
@@ -18,7 +23,22 @@
       gtk.enable = true;
       x11.enable = true;
     };
-    
+
+    # Locks the screen before any suspend (lid close included). inhibit_sleep = 3
+    # makes logind wait until the lock is up, so nothing flashes on resume.
+    services.hypridle = {
+      enable = true;
+      settings = {
+        general = {
+          lock_cmd = "${lib.getExe self.packages.${pkgs.stdenv.hostPlatform.system}.myQuickshell} ipc call lock lock";
+          before_sleep_cmd = "${lib.getExe self.packages.${pkgs.stdenv.hostPlatform.system}.myQuickshell} ipc call lock lock";
+          after_sleep_cmd = "hyprctl dispatch dpms on";
+          inhibit_sleep = 3;
+        };
+      };
+    };
+
+
     wayland.windowManager.hyprland = {
       enable = true;
       systemd.enable = true;
@@ -80,6 +100,8 @@
 
         misc = {
           disable_hyprland_logo = true;
+          # lets the lockscreen be restarted if quickshell crashes
+          allow_session_lock_restore = true;
         };
 
         ecosystem.no_update_news = true;
@@ -92,6 +114,8 @@
           "$mod SHIFT, F, togglefloating,"
           "$mod, C, centerwindow,"
           "$mod, N, exec, $shell ipc call notifications toggle"
+          "$mod, D, exec, $shell ipc call launcher toggle"
+          "$mod, Escape, exec, $shell ipc call session toggle"
 
           "$mod, H, movefocus, l"
           "$mod, L, movefocus, r"

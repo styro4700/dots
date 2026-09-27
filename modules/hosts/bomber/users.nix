@@ -1,6 +1,7 @@
 { self, inputs, ... }: {
   flake.nixosModules.bomberUsers = { ... }: {
     users.users.root.hashedPasswordFile = "/persist/passwords/root";
+    # ------ alice ----------------------
     users.users.alice = {
       isNormalUser = true;
       description = "alice";
@@ -25,11 +26,47 @@
         self.homeManagerModules.bash
         self.homeManagerModules.git
         self.homeManagerModules.hyprland
+        self.homeManagerModules.niri
       ];
+
 
       custom.git = {
         name = "Alex";
-	email = "310758950+styro4700@users.noreply.github.com";
+        email = "310758950+styro4700@users.noreply.github.com";
+      };
+
+      home.stateVersion = "26.05";
+    };
+
+    # ------ bob ----------------------
+    users.users.bob = {
+      isNormalUser = true;
+      description = "bob";
+      extraGroups = [ "networkmanager" "wheel" ];
+      uid = 1001;
+      hashedPasswordFile = "/persist/passwords/bob";
+    };
+
+    environment.persistence."/persist".users.bob.directories = [
+      "dots"
+      "Documents"
+      ".config/emacs/var" # no-littering
+      ".config/mozilla"
+    ];
+
+    home-manager.users.bob = {
+      imports = [
+        self.homeManagerModules.emacs
+        self.homeManagerModules.latex
+        self.homeManagerModules.bash
+        self.homeManagerModules.git
+        self.homeManagerModules.hyprland
+      ];
+
+
+      custom.git = {
+        name = "Alex";
+        email = "310758950+styro4700@users.noreply.github.com";
       };
 
       home.stateVersion = "26.05";

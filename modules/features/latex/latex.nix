@@ -50,7 +50,7 @@
   perSystem = { pkgs, ... }: {
     packages.myEmacsLatex = pkgs.emacsWithPackagesFromUsePackage {
       config = pkgs.runCommand "init.el" { } ''
-        cat ${../emacs/init.el} ${./latex.el} > $out
+        cat ${self.packages.${pkgs.stdenv.hostPlatform.system}.emacsTheme} ${../emacs/init.el} ${./latex.el} > $out
       '';
       defaultInitFile = true;
       package = pkgs.emacs-pgtk;
