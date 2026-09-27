@@ -42,6 +42,39 @@ Scope {
         onTriggered: root.status = ""
     }
 
+    Process {
+        id: sessionsProc
+        command: ["loginctl", "list-sessions", "--json=short"]
+        stdout: StdioCollector {
+            onStreamFinished: root.switchTo(text)
+        }
+    }
+
+    function switchUser() {
+        sessionsProc.running = true;
+    }
+
+    function switchTo(json) {
+        let sessions = [];
+        try {
+            sessions = JSON.parse(json);
+        } catch (e) {
+            return;
+        }
+        const vt = s => parseInt((s.tty || "").replace("tty", ""));
+        const other = sessions.find(s => s.class === "user" && s.user !== Quickshell.env("USER") && vt(s) > 0);
+        let target = other ? vt(other) : 0;
+        if (!target) {
+            const used = sessions.map(vt);
+            target = 1;
+            while (used.indexOf(target) >= 0) target++;
+        }
+        if (target > 6) return;
+        Quickshell.execDetached(["busctl", "call", "org.freedesktop.login1",
+            "/org/freedesktop/login1/seat/seat0", "org.freedesktop.login1.Seat",
+            "SwitchTo", "u", String(target)]);
+    }
+
     function submit() {
         if (pam.active || root.buffer.length === 0) return;
         root.status = "";
@@ -144,6 +177,35 @@ Scope {
                 MouseArea {
                     anchors.fill: parent
                     onClicked: keys.forceActiveFocus()
+                }
+
+                Rectangle {
+                    anchors.right: parent.right
+                    anchors.bottom: parent.bottom
+                    anchors.margins: 24
+                    width: 40
+                    height: 40
+                    radius: 4
+                    color: Qt.rgba(theme.fg.r, theme.fg.g, theme.fg.b, switchArea.containsMouse ? 0.12 : 0.06)
+
+                    Text {
+                        anchors.centerIn: parent
+                        text: "\uDB80\uDC19"
+                        color: switchArea.containsMouse ? theme.bright : theme.mid
+                        font.family: "JetBrainsMono Nerd Font"
+                        font.pixelSize: 20
+                    }
+
+                    MouseArea {
+                        id: switchArea
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: {
+                            root.switchUser();
+                            keys.forceActiveFocus();
+                        }
+                    }
                 }
 
                 Column {

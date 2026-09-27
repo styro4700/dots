@@ -37,7 +37,7 @@
     # NVME drive, deeper power state
     # Lower power states for idle PCIE links between bursts
     # ----------------------
-    boot.kernelParams = [ "amd_pstate=active" "mem_sleep_default=deep" "nvme_core.default_ps_max_latency_us=5500" "pcie_aspm=force" ];
+    boot.kernelParams = [ "amd_pstate=active" "mem_sleep_default=deep" "nvme_core.default_ps_max_latency_us=5500" "pcie_aspm=force" "systemd.show_status=error" ];
     # --- Wifi optimization ---
     # Disable deep power saving for the rtw88 driver - less laggy/dropping wifi
     # Enable MSI interrupts for lower latency
@@ -105,7 +105,7 @@
       };
       amdgpu = {
         opencl.enable = true;
-        initrd.enable = true;
+        # initrd.enable = true;
       };
     };
 
@@ -190,6 +190,12 @@
     ];
 
     fonts.fontconfig.enable = true;
+
+    # Console font and colours
+    console = {
+      packages = [ pkgs.terminus_font ];
+      font = "ter-v20n";
+    };    
   
     # Some programs need SUID wrappers, can be configured further or are
     # started in user sessions.
@@ -222,6 +228,24 @@
 
     # Enable upower daemon
     services.upower.enable = true;
+
+    # Allow a user to poweroff/reboot while another user has a session running
+    security.polkit.extraConfig = ''
+      polkit.addRule(function(action, subject) {
+        if ((action.id == "org.freedesktop.login1.power-off-multiple-sessions" ||
+             action.id == "org.freedesktop.login1.reboot-multiple-sessions") &&
+            subject.isInGroup("users")) {
+          return polkit.Result.YES;
+        }
+      });
+    '';
+
+    # Hide login banner on TTY << Welcome to NixOS ... >>
+    services.getty = {
+      greetingLine = lib.mkForce "[ \\l ]";
+      helpLine = lib.mkForce "";
+      extraArgs = [ "--nohostname" ];
+    };    
 
     # Belt-and-suspenders udev rule for killing wifi power management in case the modprobe option stops working
     services.udev.extraRules = ''

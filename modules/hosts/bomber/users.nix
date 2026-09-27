@@ -35,6 +35,7 @@
         email = "310758950+styro4700@users.noreply.github.com";
       };
 
+      home.file.".hushlogin".text = "";
       home.stateVersion = "26.05";
     };
 
@@ -69,6 +70,7 @@
         email = "310758950+styro4700@users.noreply.github.com";
       };
 
+      home.file.".hushlogin".text = "";
       home.stateVersion = "26.05";
     };
   };

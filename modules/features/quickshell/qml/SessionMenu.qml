@@ -1,4 +1,5 @@
 import Quickshell
+import Quickshell.Io
 import Quickshell.Wayland
 import QtQuick
 import QtQuick.Layouts
@@ -29,14 +30,37 @@ PanelWindow {
         { label: "Lock",     key: "l", danger: false, lock: true, cmd: [] },
         { label: "Logout",   key: "o", danger: false, cmd: ["hyprctl", "dispatch", "exit"] },
         { label: "Suspend",  key: "s", danger: false, cmd: ["systemctl", "suspend"] },
-        { label: "Reboot",   key: "r", danger: true,  cmd: ["systemctl", "reboot"] },
-        { label: "Shutdown", key: "p", danger: true,  cmd: ["systemctl", "poweroff"] }
+        { label: "Reboot",   key: "r", danger: true,  verb: "reboot",    cmd: ["systemctl", "reboot"] },
+        { label: "Shutdown", key: "p", danger: true,  verb: "shut down", cmd: ["systemctl", "poweroff"] }
     ]
 
     property int current: 0
     property int armed: -1
+    property string otherUser: ""
+    property bool confirming: false
+    property var pending: null
+
+    Process {
+        id: sessions
+        command: ["loginctl", "list-sessions", "--json=short"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                let other = "";
+                try {
+                    const s = JSON.parse(text).find(x => x.class === "user" && x.user !== Quickshell.env("USER"));
+                    if (s) other = s.user;
+                } catch (e) {}
+                panel.otherUser = other;
+            }
+        }
+    }
 
     function run(action) {
+        if (action.danger && panel.otherUser !== "") {
+            panel.pending = action;
+            panel.confirming = true;
+            return;
+        }
         panel.closeRequested();
         if (action.lock) panel.lockRequested();
         else Quickshell.execDetached(action.cmd);
@@ -46,6 +70,8 @@ PanelWindow {
         if (visible) {
             current = 0;
             armed = -1;
+            confirming = false;
+            sessions.running = true;
             keys.forceActiveFocus();
         }
     }
@@ -63,7 +89,18 @@ PanelWindow {
             const ctrl = event.modifiers & Qt.ControlModifier;
             const last = panel.actions.length - 1;
 
-            if (event.key === Qt.Key_Escape) {
+            if (panel.confirming) {
+                if (event.key === Qt.Key_Escape) {
+                    panel.confirming = false;
+                    panel.closeRequested();
+                } else if (event.key === Qt.Key_Y) {
+                    panel.confirming = false;
+                    panel.closeRequested();
+                    Quickshell.execDetached(panel.pending.cmd);
+                } else if (event.key === Qt.Key_N) {
+                    panel.confirming = false;
+                }
+            } else if (event.key === Qt.Key_Escape) {
                 panel.closeRequested();
             } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
                 panel.run(panel.actions[panel.current]);
@@ -78,7 +115,7 @@ PanelWindow {
             } else {
                 const idx = panel.actions.findIndex(a => a.key === event.text.toLowerCase());
                 if (idx < 0 || ctrl) return;
-                if (panel.armed === idx) {
+                if (panel.armed === idx || (panel.actions[idx].danger && panel.otherUser !== "")) {
                     panel.run(panel.actions[idx]);
                 } else {
                     panel.current = idx;
@@ -94,6 +131,7 @@ PanelWindow {
         width: 240
         height: list.implicitHeight + 24
         radius: 4
+        visible: !panel.confirming
         color: Qt.rgba(theme.bg.r, theme.bg.g, theme.bg.b, 0.92)
 
         // swallows clicks so they don't fall through to the fullscreen closer
@@ -154,6 +192,55 @@ PanelWindow {
                         }
                         onClicked: panel.run(row.modelData)
                     }
+                }
+            }
+        }
+    }
+
+    Rectangle {
+        visible: panel.confirming
+        anchors.centerIn: parent
+        width: 320
+        height: confirmCol.implicitHeight + 24
+        radius: 4
+        color: Qt.rgba(theme.bg.r, theme.bg.g, theme.bg.b, 0.92)
+
+        MouseArea {
+            anchors.fill: parent
+            onClicked: {}
+        }
+
+        ColumnLayout {
+            id: confirmCol
+            anchors.fill: parent
+            anchors.margins: 12
+            spacing: 12
+
+            Text {
+                Layout.fillWidth: true
+                wrapMode: Text.WordWrap
+                text: panel.otherUser + "'s session is running. Still " + (panel.pending ? panel.pending.verb : "") + "?"
+                color: theme.bright
+                font.family: "JetBrains Mono"
+                font.pixelSize: 13
+            }
+
+            RowLayout {
+                Layout.alignment: Qt.AlignHCenter
+                spacing: 24
+
+                Text {
+                    text: "y  yes"
+                    color: theme.green
+                    font.family: "JetBrains Mono"
+                    font.pixelSize: 13
+                }
+
+                Text {
+                    text: "n  no"
+                    color: theme.red
+                    font.family: "JetBrains Mono"
+                    font.pixelSize: 13
                 }
             }
         }
