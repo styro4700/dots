@@ -28,6 +28,13 @@
             readonly property string path: "file://${self.wallpaper}"
         }
         EOF
+        cat > $out/BluetoothFeature.qml <<'EOF'
+        import QtQuick
+
+        QtObject {
+            readonly property bool enabled: ${if self.bluetoothEnabled then "true" else "false"}
+        }
+        EOF
       '';
     };
   };

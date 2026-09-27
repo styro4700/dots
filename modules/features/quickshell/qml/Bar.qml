@@ -27,6 +27,11 @@ PanelWindow {
         anchors.rightMargin: 14
         spacing: 16
 
+        Component {
+            id: bluetoothIcon
+            Bluetooth { }
+        }        
+
         // workspaces
         RowLayout {
             spacing: 4
@@ -98,8 +103,18 @@ PanelWindow {
             }
         }
 
-	// network
-	Network { }
+	// network + bluetooth
+	RowLayout {
+	    spacing: 3
+	    Network { }
+	    Loader {
+	        active: BluetoothFeature.enabled
+	        sourceComponent: bluetoothIcon
+	    }
+	}        
+
+	// audio
+	Audio { }
 
 	// keyboard layout
 	KeyboardLayout { }

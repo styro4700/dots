@@ -14,6 +14,8 @@
         self.nixosModules.hyprland
         self.nixosModules.nmtui-theme
         self.nixosModules.grub-theme
+        self.nixosModules.audio
+      ] ++ lib.optional self.bluetoothEnabled self.nixosModules.bluetooth ++ [
       ];
 
     # Enable flakes
@@ -180,6 +182,7 @@
       mpv
       libnotify
       strace
+      alsa-utils
     ];
 
     # Install fonts
@@ -256,12 +259,10 @@
       ACTION=="add", SUBSYSTEM=="net", KERNEL=="wl*", RUN+="${pkgs.iw}/bin/iw dev $env{INTERFACE} set power_save off"
     '';
 
-    services.journald = {
-      storage = "persistent";
-      settings.Journal = {
+    services.journald.settings.Journal = {
+        Storage = "persistent";
         SystemMaxUse = "200M";
         MaxRetentionSec = "2week";
-      };
     };
 
     # Persisted system state
