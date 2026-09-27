@@ -155,6 +155,10 @@
 (use-package magit
   :ensure t)
 
+;; Syntax highlighting for different files
 (use-package nix-mode
   :ensure t
   :mode "\\.nix\\'")
+(use-package qml-mode
+  :ensure t
+  :mode "\\.qml\\'")

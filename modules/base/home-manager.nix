@@ -1,6 +1,9 @@
 {self, inputs, lib, ... }: {
   options.flake.homeManagerModules = lib.mkOption {
-    type = lib.types.lazyAttrsOf lib.types.deferredModule;
+    # a value is either a module or a group of modules (e.g. emacs-extras.latex)
+    type = lib.types.lazyAttrsOf (lib.types.either
+      (lib.types.lazyAttrsOf lib.types.deferredModule)
+      lib.types.deferredModule);    
     default = { };
     description = ''
       Home-manager modules self-registered teh same way as

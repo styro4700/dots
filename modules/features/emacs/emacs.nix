@@ -4,12 +4,23 @@
     options.custom.emacs = {
       package = lib.mkOption {
         type = lib.types.package;
-        default = self.packages.${pkgs.stdenv.hostPlatform.system}.myEmacs;
+        default = self.legacyPackages.${pkgs.stdenv.hostPlatform.system}.mkEmacs
+          config.custom.emacs.extraInit;
         description = ''
-          Which built Emacs package this user's daemon runs. Importing
-          homeManagerModules.latex overrides this to the LaTeX build.
+          Which built Emacs package this user's daemon runs. By default
+          it is built from init.el plus custom.emacs.extraInit.
         '';
-        };
+      };
+
+      extraInit = lib.mkOption {
+        type = lib.types.listOf lib.types.path;
+        default = [ ];
+        description = ''
+          Extra elisp files appended to init.el. Each may contain
+          use-package declarations, which are installed automatically.
+          Modules such as emacs-extras.latex add themselves here.
+        '';
+      };
 
       daemon.enable = lib.mkOption {
         type = lib.types.bool;
@@ -33,9 +44,9 @@
       home.shellAliases = {
         e = "emacsclient -c -a ''";
         et = "emacsclient -nw -a ''";
-     };
-   };
- };
+      };
+    };
+  };
 
   perSystem = { pkgs, ... }: let
     emacsTheme = pkgs.writeText "theme.el" ''
@@ -52,9 +63,9 @@
 
     packages.emacsTheme = emacsTheme;
 
-    packages.myEmacs = pkgs.emacsWithPackagesFromUsePackage {
+    legacyPackages.mkEmacs = extraInit: pkgs.emacsWithPackagesFromUsePackage {
       config = pkgs.runCommand "init.el" { } ''
-        cat ${emacsTheme} ${./init.el} > $out
+        cat ${emacsTheme} ${./init.el} ${pkgs.lib.concatMapStringsSep " " (f: "${f}") extraInit} > $out
       '';
       defaultInitFile = true;
       package = pkgs.emacs-pgtk;

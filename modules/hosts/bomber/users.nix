@@ -22,7 +22,7 @@
     home-manager.users.alice = {
       imports = [
         self.homeManagerModules.emacs
-        self.homeManagerModules.latex
+        self.homeManagerModules.emacs-extras.latex
         self.homeManagerModules.bash
         self.homeManagerModules.git
         self.homeManagerModules.hyprland
@@ -58,7 +58,7 @@
     home-manager.users.bob = {
       imports = [
         self.homeManagerModules.emacs
-        self.homeManagerModules.latex
+        self.homeManagerModules.emacs-extras.latex
         self.homeManagerModules.bash
         self.homeManagerModules.git
         self.homeManagerModules.hyprland
