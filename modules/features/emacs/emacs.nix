@@ -4,8 +4,10 @@
     options.custom.emacs = {
       package = lib.mkOption {
         type = lib.types.package;
-        default = self.legacyPackages.${pkgs.stdenv.hostPlatform.system}.mkEmacs
-          config.custom.emacs.extraInit;
+        default = self.legacyPackages.${pkgs.stdenv.hostPlatform.system}.mkEmacs {
+          extraInit = config.custom.emacs.extraInit;
+          extraEmacsPackages = config.custom.emacs.extraEmacsPackages;
+        };        
         description = ''
           Which built Emacs package this user's daemon runs. By default
           it is built from init.el plus custom.emacs.extraInit.
@@ -21,6 +23,18 @@
           Modules such as emacs-extras.latex add themselves here.
         '';
       };
+
+      extraEmacsPackages = lib.mkOption {
+        type = lib.types.listOf (lib.types.functionTo (lib.types.listOf lib.types.package));
+        default = [ ];
+        description = ''
+          Functions from the epkgs set to extra Emacs packages that
+          aren't referenced via a use-package form, e.g. tree-sitter
+          grammars. Modules such as emacs-extras.devel add themselves
+          here.
+        '';
+      };
+      
 
       daemon.enable = lib.mkOption {
         type = lib.types.bool;
@@ -63,7 +77,7 @@
 
     packages.emacsTheme = emacsTheme;
 
-    legacyPackages.mkEmacs = extraInit: pkgs.emacsWithPackagesFromUsePackage {
+    legacyPackages.mkEmacs = { extraInit, extraEmacsPackages ? [ ] }: pkgs.emacsWithPackagesFromUsePackage {      
       config = pkgs.runCommand "init.el" { } ''
         cat ${emacsTheme} ${./init.el} ${pkgs.lib.concatMapStringsSep " " (f: "${f}") extraInit} > $out
       '';
@@ -71,6 +85,7 @@
       package = pkgs.emacs-pgtk;
       alwaysEnsure = true;
       alwaysTangle = true;
+      extraEmacsPackages = epkgs: builtins.concatMap (f: f epkgs) extraEmacsPackages;
     };
   };
 }

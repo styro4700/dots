@@ -13,6 +13,7 @@
         self.nixosModules.bomberUsers
         self.nixosModules.hyprland
         self.nixosModules.nmtui-theme
+        self.nixosModules.grub-theme
       ];
 
     # Enable flakes
@@ -247,10 +248,21 @@
       extraArgs = [ "--nohostname" ];
     };    
 
+    # PlatformIO board flashing without sudo
+    services.udev.packages = [ pkgs.platformio-core.udev ];
+
     # Belt-and-suspenders udev rule for killing wifi power management in case the modprobe option stops working
     services.udev.extraRules = ''
       ACTION=="add", SUBSYSTEM=="net", KERNEL=="wl*", RUN+="${pkgs.iw}/bin/iw dev $env{INTERFACE} set power_save off"
     '';
+
+    services.journald = {
+      storage = "persistent";
+      settings.Journal = {
+        SystemMaxUse = "200M";
+        MaxRetentionSec = "2week";
+      };
+    };
 
     # Persisted system state
     environment.persistence."/persist".directories = [

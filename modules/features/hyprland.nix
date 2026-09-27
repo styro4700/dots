@@ -86,7 +86,6 @@
 
         input = {
           kb_layout = "us,gr";
-          kb_options = "grp:alt_shift_toggle";
           repeat_rate = 40;
           repeat_delay = 250;
           follow_mouse = 1;
@@ -116,6 +115,8 @@
           "$mod, N, exec, $shell ipc call notifications toggle"
           "$mod, D, exec, $shell ipc call launcher toggle"
           "$mod, Escape, exec, $shell ipc call session toggle"
+
+         "ALT, Space, exec, hyprctl switchxkblayout current next"
 
           "$mod, H, movefocus, l"
           "$mod, L, movefocus, r"

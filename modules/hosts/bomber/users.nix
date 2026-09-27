@@ -5,7 +5,7 @@
     users.users.alice = {
       isNormalUser = true;
       description = "alice";
-      extraGroups = [ "networkmanager" "wheel" ];
+      extraGroups = [ "networkmanager" "wheel" "dialout" ];
       uid = 1000;
       hashedPasswordFile = "/persist/passwords/alice";
     };
@@ -22,12 +22,14 @@
     home-manager.users.alice = {
       imports = [
         self.homeManagerModules.emacs
-        self.homeManagerModules.emacs-extras.latex
         self.homeManagerModules.bash
         self.homeManagerModules.git
         self.homeManagerModules.hyprland
         self.homeManagerModules.niri
-      ];
+      ] ++ (with self.homeManagerModules.emacs-extras; [
+        latex
+        devel
+      ]);
 
 
       custom.git = {
@@ -43,7 +45,7 @@
     users.users.bob = {
       isNormalUser = true;
       description = "bob";
-      extraGroups = [ "networkmanager" "wheel" ];
+      extraGroups = [ "networkmanager" "wheel" "dialout" ];
       uid = 1001;
       hashedPasswordFile = "/persist/passwords/bob";
     };
