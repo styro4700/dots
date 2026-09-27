@@ -6,7 +6,5 @@
       enable = true;
       powerOnBoot = true;
     };
-
-    services.blueman.enable = true; # GTK tray applet + pairing UI
   };
 }

@@ -1,6 +1,22 @@
 { self, inputs, ... }: {
 
-  perSystem = { pkgs, ... }: {
+  perSystem = { pkgs, self', ... }: {
+
+    # bluetooth pairing agent the bar talks to, see qs-bt-agent.c
+    packages.qsBtAgent = pkgs.stdenv.mkDerivation {
+      name = "qs-bt-agent";
+      src = ./qs-bt-agent.c;
+      dontUnpack = true;
+      nativeBuildInputs = [ pkgs.pkg-config ];
+      buildInputs = [ pkgs.systemd ];
+      buildPhase = ''
+        $CC -O2 -Wall -Wextra -o qs-bt-agent $src $(pkg-config --cflags --libs libsystemd)
+      '';
+      installPhase = ''
+        install -Dm755 qs-bt-agent $out/bin/qs-bt-agent
+      '';
+      meta.mainProgram = "qs-bt-agent";
+    };
 
     packages.myQuickshell = inputs.wrapper-modules.wrappers.quickshell.wrap {
       inherit pkgs;
@@ -29,10 +45,12 @@
         }
         EOF
         cat > $out/BluetoothFeature.qml <<'EOF'
-        import QtQuick
+        pragma Singleton
+        import Quickshell
 
-        QtObject {
+        Singleton {
             readonly property bool enabled: ${if self.bluetoothEnabled then "true" else "false"}
+            readonly property string agent: "${if self.bluetoothEnabled then "${self'.packages.qsBtAgent}/bin/qs-bt-agent" else ""}"
         }
         EOF
       '';

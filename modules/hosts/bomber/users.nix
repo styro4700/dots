@@ -17,6 +17,7 @@
       ".config/noctalia"
       ".cache/noctalia"
       ".config/mozilla"
+      ".local/share/direnv" # direnv's allow list
     ];
 
     home-manager.users.alice = {

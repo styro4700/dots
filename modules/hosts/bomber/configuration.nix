@@ -272,6 +272,7 @@
       "/var/lib/iwd"
       "/etc/NetworkManager/system-connections"
       "/var/lib/tailscale"
+      { directory = "/var/lib/bluetooth"; mode = "0700"; } # pairing keys
     ];
 
     # Open ports in the firewall.

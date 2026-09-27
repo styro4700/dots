@@ -80,6 +80,7 @@ ShellRoot {
         onLockRequested: lock.lockNow()
     }
     Lock { id: lock }
+    BluetoothAgent { locked: lock.locked }
 
     Connections {
         target: lock
